@@ -457,6 +457,7 @@ const Corsi = {
         <button class="btn btn-primary" onclick="Corsi._startActualTest()">Start test →</button>
       </div>
     `;
+    showScreen('s-corsi');
   },
 
   _buildResults() {
