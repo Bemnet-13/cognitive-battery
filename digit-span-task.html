@@ -193,7 +193,7 @@ canvas{display:block;border-radius:var(--r-sm)}
       <button class="btn" onclick="genPID()" style="white-space:nowrap">Generate</button>
     </div>
   </div>
-  <button id="consent-btn" class="btn btn-primary btn-lg" onclick="beginForward()" disabled style="width:100%">Continue →</button>
+  <button id="consent-btn" class="btn btn-primary btn-lg" onclick="beginDigitSpan()" disabled style="width:100%">Continue →</button>
 </div>
 </div>
 
@@ -202,8 +202,8 @@ canvas{display:block;border-radius:var(--r-sm)}
 <div class="card fade-up">
   <div id="inst-body"></div>
   <div style="display:flex;gap:.75rem;margin-top:1.5rem" id="inst-btns">
-    <button id="btn-practice" class="btn" style="flex:1" onclick="startPractice()">Practice round first</button>
-    <button class="btn btn-primary" style="flex:1" onclick="startActualTest()">Start test →</button>
+    <button id="btn-practice" class="btn" style="flex:1" onclick="DigitSpan.startPractice()">Practice round first</button>
+    <button class="btn btn-primary" style="flex:1" onclick="DigitSpan.startActualTest()">Start test →</button>
   </div>
 </div>
 </div>
@@ -244,7 +244,7 @@ canvas{display:block;border-radius:var(--r-sm)}
       <span style="font-family:var(--mono);font-weight:600">293</span>.
     </p>
   </div>
-  <button class="btn btn-primary btn-lg" onclick="beginBackward()" style="width:100%">Begin backward span →</button>
+  <button class="btn btn-primary btn-lg" onclick="DigitSpan.beginBackward()" style="width:100%">Begin backward span →</button>
 </div>
 </div>
 
@@ -284,6 +284,10 @@ canvas{display:block;border-radius:var(--r-sm)}
   <canvas id="rt-canvas" height="160" style="width:100%;background:var(--surf2)"></canvas>
 
   <div class="divider"></div>
+  <h3 style="margin-bottom:.75rem">Serial position curve</h3>
+  <canvas id="sp-canvas" height="140" style="width:100%;background:var(--surf2);margin-bottom:.5rem"></canvas>
+
+  <div class="divider"></div>
   <h3 style="margin-bottom:.75rem">Error type analysis</h3>
   <div class="stats-grid" style="margin-bottom:.5rem">
     <div class="stat-card"><div class="stat-val" id="r-etrans">—</div><div class="stat-label">Transposition</div></div>
@@ -320,7 +324,7 @@ canvas{display:block;border-radius:var(--r-sm)}
 </div><!-- #app -->
 
 <script>
-// ── Seeded RNG (mulberry32) ──────────────────────────────────────────
+// ── Seeded RNG (mulberry32) ──
 function hashStr(s) {
   let h = 5381;
   for (let i = 0; i < s.length; i++) h = (((h << 5) + h) + s.charCodeAt(i)) | 0;
@@ -336,24 +340,26 @@ function makePRNG(seed) {
   };
 }
 
-// ── State ────────────────────────────────────────────────────────────
+// ── Global state (SPEC §Architecture) ──
 const S = {
-  pid: '', rng: null, condition: 'forward', isPractice: false,
-  currentLevel: 3, trialsHere: [], // trials at current level only
-  allTrials: [],                    // entire session log
-  practiceLeft: 2,
-  inputRevealTime: 0,
-  fwdSpan: 0, bwdSpan: 0,
+  pid: '',
+  demographics: {},
+  deviceMeta: {},
+  taskOrder: [],
+  taskActive: false,
+  results: { digitSpan: null },
 };
 
-// ── Screen navigation ────────────────────────────────────────────────
+// ── Derived helpers ──
+function rng() { return makePRNG(hashStr(S.pid)); }
+
+// ── Screen navigation ──
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
-  const el = document.getElementById(id);
-  el.classList.add('active');
+  document.getElementById(id).classList.add('active');
 }
 
-// ── Welcome / Consent ────────────────────────────────────────────────
+// ── Welcome / Consent ──
 function genPID() {
   document.getElementById('pid').value = 'P' + Math.random().toString(36).slice(2, 7).toUpperCase();
   checkConsent();
@@ -364,338 +370,533 @@ function checkConsent() {
              document.getElementById('pid').value.trim().length > 0;
   document.getElementById('consent-btn').disabled = !ok;
 }
-function beginForward() {
+function beginDigitSpan() {
   S.pid = document.getElementById('pid').value.trim();
-  S.rng = makePRNG(hashStr(S.pid));
-  showInstructions('forward');
+  S.deviceMeta = { screen_width: screen.width, screen_height: screen.height, user_agent: navigator.userAgent };
+  DigitSpan.run(results => {
+    S.results.digitSpan = results;
+    showDigitSpanResults();
+  });
 }
 
-// ── Instructions ─────────────────────────────────────────────────────
-function showInstructions(cond) {
-  S.condition = cond;
-  const fwd = cond === 'forward';
-  document.getElementById('inst-body').innerHTML = `
-    <div class="badge ${fwd ? 'badge-blue' : 'badge-amber'}" style="margin-bottom:.75rem">
-      Condition ${fwd ? '1' : '2'} of 2
-    </div>
-    <h2 style="margin-bottom:.75rem">${fwd ? 'Forward' : 'Backward'} Digit Span</h2>
-    <p style="margin-bottom:1rem">
-      Digits will appear <strong>one at a time</strong>, each for about ¾ of a second.
-      After the last digit, ${fwd
-        ? 'type them back <strong>in the same order</strong> they were shown.'
-        : 'type them back <strong>in reverse order</strong>. Shown 3 → 9 → 2? Type <span style="font-family:var(--mono);font-weight:600">293</span>.'}
-    </p>
-    <div style="background:var(--surf2);border:1px solid var(--bd);border-radius:var(--r-sm);padding:.875rem 1.25rem;margin-bottom:1rem">
-      <div class="label" style="margin-bottom:.5rem">Example</div>
-      <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;font-size:.875rem;color:var(--ink2)">
-        <span>Shown: <span style="font-family:var(--mono);font-weight:600;color:var(--ink)">4 → 8 → 2</span></span>
-        <span>→</span>
-        <span>Type: <span style="font-family:var(--mono);font-weight:600;color:var(--ink)">${fwd ? '482' : '284'}</span></span>
+// ── Digit Span Task (SPEC §Task interface) ──
+const DigitSpan = {
+  id: 'digitSpan',
+  label: 'Digit Span',
+
+  // internal state
+  _cond: 'forward',
+  _isPractice: false,
+  _currentLevel: 3,
+  _trialsHere: [],
+  _allTrials: [],
+  _practiceLeft: 2,
+  _inputRevealTime: 0,
+  _fwdSpan: 0,
+  _bwdSpan: 0,
+  _onComplete: null,
+  _timeoutId: null,
+  _rng: null,
+
+  showInstructions(onReady) {
+    this._onReady = onReady;
+    this._renderInstructions('forward');
+  },
+
+  run(onComplete) {
+    this._reset();
+    S.taskActive = true;
+    this._onComplete = onComplete;
+    this._rng = rng();
+    this._showInstructions('forward');
+  },
+
+  getCSVRows(results, sessionMeta) {
+    const base = { ...sessionMeta };
+    return results.trials.map(t => ({ ...base, ...t }));
+  },
+
+  renderResults(results, container) {
+    // Standalone rendering for Step 1 — full dashboard rendering into container
+    const real = results.trials.filter(t => !t.is_practice);
+    const fwd = real.filter(t => t.condition === 'forward');
+    const bwd = real.filter(t => t.condition === 'backward');
+    container.innerHTML = `
+      <div class="stats-grid" style="margin-bottom:1.5rem">
+        <div class="stat-card"><div class="stat-val">${results.forwardSpan}</div><div class="stat-label">Forward span</div></div>
+        <div class="stat-card"><div class="stat-val">${results.backwardSpan}</div><div class="stat-label">Backward span</div></div>
+        <div class="stat-card"><div class="stat-val">${results.rawScore}</div><div class="stat-label">Raw score</div></div>
+        <div class="stat-card"><div class="stat-val">${(results.meanRT || 0).toFixed(2)}</div><div class="stat-label">Mean RT (s)</div></div>
       </div>
-    </div>
-    <ul style="font-size:.875rem;color:var(--ink2);padding-left:1.25rem;line-height:2">
-      <li>Sequences start at length ${fwd ? '3' : '2'} and increase to ${fwd ? '9' : '8'}</li>
-      <li>2 trials per length — pass if at least 1 is correct</li>
-      <li>Type digits without spaces · press <span style="font-family:var(--mono)">Enter</span> to submit</li>
-    </ul>
-  `;
-  document.getElementById('btn-practice').style.display = fwd ? '' : 'none';
-  showScreen('s-instructions');
-}
-
-// ── Sequence generator ───────────────────────────────────────────────
-function makeSeq(len) {
-  const seq = [];
-  while (seq.length < len) {
-    const d = Math.floor(S.rng() * 9) + 1;
-    if (!seq.length || seq[seq.length - 1] !== d) seq.push(d);
-  }
-  return seq;
-}
-
-// ── Practice ─────────────────────────────────────────────────────────
-function startPractice() {
-  S.isPractice = true;
-  S.practiceLeft = 2;
-  launchTrial(3);
-}
-function startActualTest() {
-  S.isPractice = false;
-  S.currentLevel = S.condition === 'backward' ? 2 : 3;
-  S.trialsHere = [];
-  launchTrial(S.currentLevel);
-}
-
-// ── Trial launcher ───────────────────────────────────────────────────
-const TFIX = 900, TDIG = 750, TISI = 300, TFB = 1300;
-
-function buildDots() {
-  const minL = S.condition === 'backward' ? 2 : 3;
-  const maxL = S.condition === 'forward' ? 9 : 8;
-  let html = '';
-  for (let l = minL; l <= maxL; l++) {
-    const here = S.allTrials.filter(t => t.level === l && t.condition === S.condition && !t.isPractice);
-    let cls = 'dot';
-    if (here.length) {
-      if (here.some(t => t.correct)) cls += ' pass';
-      else cls += ' fail';
-    }
-    if (!S.isPractice && l === S.currentLevel) cls += ' active';
-    html += `<div class="${cls}">${l}</div>`;
-  }
-  document.getElementById('t-dots').innerHTML = html;
-}
-
-function launchTrial(level) {
-  showScreen('s-trial');
-  document.getElementById('t-cond-label').textContent =
-    S.condition === 'forward' ? 'Forward span' : 'Backward span';
-  document.getElementById('t-level').textContent = level;
-  document.getElementById('t-status').textContent =
-    S.isPractice ? 'Practice trial' :
-    `Trial ${S.trialsHere.length + 1} at length ${level}`;
-  buildDots();
-  runOneTrial(level);
-}
-
-function runOneTrial(level) {
-  const seq = makeSeq(level);
-  const stage = document.getElementById('trial-stage');
-
-  // Build timing schedule
-  const sched = [];
-  let t = TFIX;
-  sched.push({ t: 0, fn: () => { stage.innerHTML = '<div class="fixation pop">+</div><div class="trial-prompt" style="margin-top:-.5rem">Get ready…</div>'; } });
-  for (let i = 0; i < seq.length; i++) {
-    const d = seq[i];
-    sched.push({ t, fn: () => { stage.innerHTML = `<div class="digit-display pop">${d}</div>`; } });
-    t += TDIG;
-    if (i < seq.length - 1) {
-      sched.push({ t, fn: () => { stage.innerHTML = ''; } });
-      t += TISI;
-    }
-  }
-  sched.push({ t: t + 250, fn: () => showInput(seq) });
-
-  sched.forEach(({ t: delay, fn }) => setTimeout(fn, delay));
-}
-
-function showInput(seq) {
-  S.inputRevealTime = performance.now();
-  const bwd = S.condition === 'backward';
-  const stage = document.getElementById('trial-stage');
-  stage.innerHTML = `
-    <div class="trial-prompt" style="margin-bottom:.75rem">
-      ${bwd ? 'Type the digits in <strong>reverse</strong> order:' : 'Type the digits in order:'}
-    </div>
-    <div class="answer-row">
-      <input type="text" id="ans" inputmode="numeric" maxlength="9"
-        autocomplete="off" autocorrect="off" spellcheck="false" autofocus
-        oninput="this.value=this.value.replace(/[^1-9]/g,'')">
-      <button class="btn btn-primary" onclick="submitAns(${JSON.stringify(seq)})">Submit</button>
-    </div>
-    <div class="trial-prompt" style="margin-top:.5rem;font-size:.78rem;color:var(--ink3)">
-      Digits 1–9 only · no spaces · Enter to confirm
-    </div>
-  `;
-  const inp = document.getElementById('ans');
-  if (inp) {
-    inp.focus();
-    inp.addEventListener('keydown', e => { if (e.key === 'Enter') submitAns(seq); });
-  }
-}
-
-// ── Answer evaluation ────────────────────────────────────────────────
-function classifyError(expected, typed) {
-  if (expected.length !== typed.length) return 'length';
-  const es = [...expected].sort().join(''), ts = [...typed].sort().join('');
-  return es === ts ? 'transposition' : 'substitution';
-}
-
-function submitAns(seq) {
-  const inp = document.getElementById('ans');
-  if (!inp) return;
-  const rt = performance.now() - S.inputRevealTime;
-  const typed = inp.value.split('').map(Number).filter(n => n >= 1 && n <= 9);
-  const expected = S.condition === 'backward' ? [...seq].reverse() : [...seq];
-  const correct = typed.length === expected.length && typed.every((d, i) => d === expected[i]);
-  const errType = correct ? 'none' : classifyError(expected, typed);
-  const trial = {
-    pid: S.pid, condition: S.condition,
-    trialNo: S.allTrials.filter(t => !t.isPractice).length + 1,
-    level: seq.length, sequenceShown: seq.join(''),
-    correctAnswer: expected.join(''), responseTyped: typed.join(''),
-    correct, errorType: errType, rtMs: Math.round(rt),
-    timestamp: new Date().toISOString(), isPractice: S.isPractice,
-  };
-  if (!S.isPractice) {
-    S.allTrials.push(trial);
-    S.trialsHere.push({ correct, level: seq.length });
-  }
-  showFeedback(expected, typed, correct, seq.length);
-}
-
-function showFeedback(expected, typed, correct, level) {
-  const stage = document.getElementById('trial-stage');
-  stage.innerHTML = `
-    <div class="fb-box ${correct ? 'fb-correct' : 'fb-wrong'} pop">
-      <div class="fb-title">${correct ? '✓ Correct' : '✗ Incorrect'}</div>
-      ${!correct ? `<div style="font-size:.8rem;margin-top:.3rem">Answer: <span class="fb-seq">${expected.join(' ')}</span></div>` : ''}
-      ${S.isPractice ? '<div style="font-size:.78rem;opacity:.75;margin-top:.25rem">Practice — not scored</div>' : ''}
-    </div>
-  `;
-  setTimeout(() => S.isPractice ? advancePractice(level) : advanceStaircase(level), TFB);
-}
-
-// ── Practice progression ─────────────────────────────────────────────
-function advancePractice(level) {
-  S.practiceLeft--;
-  if (S.practiceLeft > 0) {
-    runOneTrial(level);
-  } else {
-    document.getElementById('trial-stage').innerHTML = `
-      <div style="text-align:center" class="fade-up">
-        <div style="font-size:2rem;margin-bottom:.75rem">✓</div>
-        <h3 style="margin-bottom:.4rem">Practice complete</h3>
-        <p style="font-size:.875rem;color:var(--ink2);margin-bottom:1.25rem">You're ready for the real test.</p>
-        <button class="btn btn-primary btn-lg" onclick="startActualTest()">Start test →</button>
+      <div class="divider"></div>
+      <h3 style="margin-bottom:.75rem">Accuracy by span length</h3>
+      <div style="overflow-x:auto">
+        <table class="data-table">
+          <thead><tr><th>Length</th><th>Condition</th><th>Trials</th><th>Correct</th><th>Accuracy</th></tr></thead>
+          <tbody>${this._buildAccuracyRows(real, results.forwardSpan, results.backwardSpan)}</tbody>
+        </table>
+      </div>
+      <div class="divider"></div>
+      <h3>Error type analysis</h3>
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-val">${results.errorBreakdown.transposition}</div><div class="stat-label">Transposition</div></div>
+        <div class="stat-card"><div class="stat-val">${results.errorBreakdown.substitution}</div><div class="stat-label">Substitution</div></div>
+        <div class="stat-card"><div class="stat-val">${results.errorBreakdown.length}</div><div class="stat-label">Length error</div></div>
       </div>
     `;
-    document.getElementById('t-status').textContent = 'Ready';
-    document.getElementById('t-dots').innerHTML = '';
-  }
-}
+  },
 
-// ── Staircase (WAIS-IV: 2 trials/level, advance if ≥1/2 correct) ────
-function advanceStaircase(level) {
-  const maxL = S.condition === 'forward' ? 9 : 8;
-  const total = S.trialsHere.length;
-  const nCorrect = S.trialsHere.filter(t => t.correct).length;
+  // ── Internal: reset ──
+  _reset() {
+    this._cond = 'forward';
+    this._isPractice = false;
+    this._currentLevel = 3;
+    this._trialsHere = [];
+    this._allTrials = [];
+    this._practiceLeft = 2;
+    this._inputRevealTime = 0;
+    this._fwdSpan = 0;
+    this._bwdSpan = 0;
+    this._onComplete = null;
+    this._onReady = null;
+    this._rng = null;
+    if (this._timeoutId) { clearTimeout(this._timeoutId); this._timeoutId = null; }
+  },
 
-  if (total < 2) {
-    // Need second trial at this level
-    document.getElementById('t-status').textContent = `Trial ${total + 1} at length ${level}`;
-    buildDots();
-    runOneTrial(level);
-    return;
-  }
+  // ── Instructions ──
+  _showInstructions(cond) {
+    this._cond = cond;
+    this._renderInstructions(cond);
+    showScreen('s-instructions');
+  },
 
-  // Two trials done — evaluate
-  if (nCorrect >= 1) {
-    // Passed
-    if (level >= maxL) { endCondition(); return; }
-    S.currentLevel = level + 1;
-    S.trialsHere = [];
-    document.getElementById('t-level').textContent = S.currentLevel;
-    document.getElementById('t-status').textContent = `Trial 1 at length ${S.currentLevel}`;
-    buildDots();
-    runOneTrial(S.currentLevel);
-  } else {
-    // Failed — stop
-    endCondition();
-  }
-}
+  _renderInstructions(cond) {
+    const fwd = cond === 'forward';
+    document.getElementById('inst-body').innerHTML = `
+      <div class="badge ${fwd ? 'badge-blue' : 'badge-amber'}" style="margin-bottom:.75rem">
+        Condition ${fwd ? '1' : '2'} of 2
+      </div>
+      <h2 style="margin-bottom:.75rem">${fwd ? 'Forward' : 'Backward'} Digit Span</h2>
+      <p style="margin-bottom:1rem">
+        Digits will appear <strong>one at a time</strong>, each for about ¾ of a second.
+        After the last digit, ${fwd
+          ? 'type them back <strong>in the same order</strong> they were shown.'
+          : 'type them back <strong>in reverse order</strong>. Shown 3 → 9 → 2? Type <span style="font-family:var(--mono);font-weight:600">293</span>.'}
+      </p>
+      <div style="background:var(--surf2);border:1px solid var(--bd);border-radius:var(--r-sm);padding:.875rem 1.25rem;margin-bottom:1rem">
+        <div class="label" style="margin-bottom:.5rem">Example</div>
+        <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;font-size:.875rem;color:var(--ink2)">
+          <span>Shown: <span style="font-family:var(--mono);font-weight:600;color:var(--ink)">4 → 8 → 2</span></span>
+          <span>→</span>
+          <span>Type: <span style="font-family:var(--mono);font-weight:600;color:var(--ink)">${fwd ? '482' : '284'}</span></span>
+        </div>
+      </div>
+      <ul style="font-size:.875rem;color:var(--ink2);padding-left:1.25rem;line-height:2">
+        <li>Sequences start at length ${fwd ? '3' : '2'} and increase to ${fwd ? '9' : '8'}</li>
+        <li>2 trials per length — pass if at least 1 is correct</li>
+        <li>Type digits without spaces · press <span style="font-family:var(--mono)">Enter</span> to submit</li>
+      </ul>
+    `;
+    document.getElementById('btn-practice').style.display = fwd ? '' : 'none';
+  },
 
-// ── Span computation ─────────────────────────────────────────────────
-function computeSpan(cond) {
-  let span = 0;
-  const trials = S.allTrials.filter(t => t.condition === cond && !t.isPractice);
-  const levels = [...new Set(trials.map(t => t.level))].sort((a, b) => a - b);
-  for (const l of levels) {
-    if (trials.filter(t => t.level === l).some(t => t.correct)) span = l;
-  }
-  return span;
-}
+  // ── Sequence generator ──
+  _makeSeq(len) {
+    const seq = [];
+    while (seq.length < len) {
+      const d = Math.floor(this._rng() * 9) + 1;
+      if (!seq.length || seq[seq.length - 1] !== d) seq.push(d);
+    }
+    return seq;
+  },
 
-// ── End condition ────────────────────────────────────────────────────
-function endCondition() {
-  if (S.condition === 'forward') {
-    S.fwdSpan = computeSpan('forward');
-    const fwdAll = S.allTrials.filter(t => t.condition === 'forward' && !t.isPractice);
-    const acc = fwdAll.length ? Math.round(fwdAll.filter(t => t.correct).length / fwdAll.length * 100) + '%' : '—';
-    document.getElementById('brk-span').textContent = S.fwdSpan;
-    document.getElementById('brk-acc').textContent = acc;
-    S.trialsHere = [];
-    showScreen('s-break');
-  } else {
-    S.bwdSpan = computeSpan('backward');
-    showResults();
-  }
-}
+  // ── Practice / Test entry ──
+  startPractice() {
+    this._isPractice = true;
+    this._practiceLeft = 2;
+    this._launchTrial(3);
+  },
 
-function beginBackward() {
-  S.condition = 'backward';
-  showInstructions('backward');
-}
+  startActualTest() {
+    this._isPractice = false;
+    this._currentLevel = this._cond === 'backward' ? 2 : 3;
+    this._trialsHere = [];
+    this._launchTrial(this._currentLevel);
+  },
 
-// ── Results ──────────────────────────────────────────────────────────
-function showResults() {
+  // ── Trial launcher ──
+  _TFIX: 900, _TDIG: 750, _TISI: 300, _TFB: 1300, _TIMEOUT: 30000,
+
+  _buildDots() {
+    const minL = this._cond === 'backward' ? 2 : 3;
+    const maxL = this._cond === 'forward' ? 9 : 8;
+    let html = '';
+    for (let l = minL; l <= maxL; l++) {
+      const here = this._allTrials.filter(t => t.level === l && t.condition === this._cond && !t.isPractice);
+      let cls = 'dot';
+      if (here.length) {
+        if (here.some(t => t.correct)) cls += ' pass';
+        else cls += ' fail';
+      }
+      if (!this._isPractice && l === this._currentLevel) cls += ' active';
+      html += `<div class="${cls}">${l}</div>`;
+    }
+    document.getElementById('t-dots').innerHTML = html;
+  },
+
+  _launchTrial(level) {
+    showScreen('s-trial');
+    document.getElementById('t-cond-label').textContent =
+      this._cond === 'forward' ? 'Forward span' : 'Backward span';
+    document.getElementById('t-level').textContent = level;
+    document.getElementById('t-status').textContent =
+      this._isPractice ? 'Practice trial' :
+      `Trial ${this._trialsHere.length + 1} at length ${level}`;
+    this._buildDots();
+    this._runOneTrial(level);
+  },
+
+  _runOneTrial(level) {
+    const seq = this._makeSeq(level);
+    const stage = document.getElementById('trial-stage');
+    const TFIX = this._TFIX, TDIG = this._TDIG, TISI = this._TISI;
+
+    const sched = [];
+    let t = 0;
+    sched.push({ t: 0, fn: () => { stage.innerHTML = '<div class="fixation pop">+</div><div class="trial-prompt" style="margin-top:-.5rem">Get ready…</div>'; } });
+    for (let i = 0; i < seq.length; i++) {
+      const d = seq[i];
+      sched.push({ t, fn: () => { stage.innerHTML = `<div class="digit-display pop">${d}</div>`; } });
+      t += TDIG;
+      if (i < seq.length - 1) {
+        sched.push({ t, fn: () => { stage.innerHTML = ''; } });
+        t += TISI;
+      }
+    }
+    t += TFIX;
+    sched.push({ t, fn: () => this._showInput(seq) });
+
+    sched.forEach(({ t: delay, fn }) => setTimeout(fn, delay));
+  },
+
+  _showInput(seq) {
+    this._inputRevealTime = performance.now();
+    const bwd = this._cond === 'backward';
+    const stage = document.getElementById('trial-stage');
+    stage.innerHTML = `
+      <div class="trial-prompt" style="margin-bottom:.75rem">
+        ${bwd ? 'Type the digits in <strong>reverse</strong> order:' : 'Type the digits in order:'}
+      </div>
+      <div class="answer-row">
+        <input type="text" id="ans" inputmode="numeric" maxlength="9"
+          autocomplete="off" autocorrect="off" spellcheck="false" autofocus
+          oninput="this.value=this.value.replace(/[^1-9]/g,'')">
+        <button class="btn btn-primary" onclick="DigitSpan._submitAns(${JSON.stringify(seq)})">Submit</button>
+      </div>
+      <div class="trial-prompt" style="margin-top:.5rem;font-size:.78rem;color:var(--ink3)">
+        Digits 1–9 only · no spaces · Enter to confirm
+      </div>
+    `;
+    const inp = document.getElementById('ans');
+    if (inp) {
+      inp.focus();
+      inp.addEventListener('keydown', e => { if (e.key === 'Enter') DigitSpan._submitAns(seq); });
+    }
+    // 30-second timeout
+    this._timeoutId = setTimeout(() => this._handleTimeout(seq), this._TIMEOUT);
+  },
+
+  _handleTimeout(seq) {
+    const inp = document.getElementById('ans');
+    if (!inp) return;
+    this._timeoutId = null;
+    const expected = this._cond === 'backward' ? [...seq].reverse() : [...seq];
+    const trial = this._buildTrial(seq, expected, '', 0, false, 'timeout');
+    this._recordTrial(trial);
+    this._showTimeoutFeedback(expected, seq.length);
+  },
+
+  _showTimeoutFeedback(expected, level) {
+    const stage = document.getElementById('trial-stage');
+    stage.innerHTML = `
+      <div class="fb-box fb-wrong pop">
+        <div class="fb-title">⏱ Time's up!</div>
+        <div style="font-size:.8rem;margin-top:.3rem">Answer: <span class="fb-seq">${expected.join(' ')}</span></div>
+        ${this._isPractice ? '<div style="font-size:.78rem;opacity:.75;margin-top:.25rem">Practice — not scored</div>' : ''}
+      </div>
+    `;
+    setTimeout(() => this._isPractice ? this._advancePractice(level) : this._advanceStaircase(level), this._TFB);
+  },
+
+  // ── Answer submission ──
+  _buildTrial(seq, expected, typedStr, rt, correct, errorType) {
+    const posErr = expected.length && typedStr.length === expected.length
+      ? expected.map((d, i) => Number(typedStr[i] === String(d))).join(',')
+      : '';
+    return {
+      task: this.id,
+      condition: this._cond,
+      block: '',
+      trial_no: this._allTrials.filter(t => !t.isPractice).length + 1,
+      level: seq.length,
+      stimulus: seq.join(''),
+      correct_answer: expected.join(''),
+      response: typedStr,
+      correct,
+      error_type: errorType,
+      rt_ms: errorType === 'timeout' ? null : Math.round(rt),
+      rt_outlier: false,
+      is_practice: this._isPractice,
+      position_errors: posErr,
+      timestamp: new Date().toISOString(),
+    };
+  },
+
+  _recordTrial(trial) {
+    if (this._timeoutId) { clearTimeout(this._timeoutId); this._timeoutId = null; }
+    if (!trial.is_practice) {
+      this._allTrials.push(trial);
+      this._trialsHere.push({ correct: trial.correct, level: trial.level });
+    }
+  },
+
+  _submitAns(seq) {
+    if (this._timeoutId) { clearTimeout(this._timeoutId); this._timeoutId = null; }
+    const inp = document.getElementById('ans');
+    if (!inp) return;
+    const rt = performance.now() - this._inputRevealTime;
+    const typed = inp.value.split('').filter(c => c >= '1' && c <= '9');
+    const typedStr = typed.join('');
+    const expected = this._cond === 'backward' ? [...seq].reverse() : [...seq];
+    const correct = typed.length === expected.length && typed.every((d, i) => d === String(expected[i]));
+    const errType = correct ? 'none' : this._classifyError(expected, typed.map(Number));
+    const trial = this._buildTrial(seq, expected, typedStr, rt, correct, errType);
+    this._recordTrial(trial);
+    this._showFeedback(expected, typedStr, correct, seq.length);
+  },
+
+  _classifyError(expected, typed) {
+    if (expected.length !== typed.length) return 'length';
+    const es = [...expected].sort((a, b) => a - b).join(',');
+    const ts = [...typed].sort((a, b) => a - b).join(',');
+    return es === ts ? 'transposition' : 'substitution';
+  },
+
+  // ── Feedback ──
+  _showFeedback(expected, typedStr, correct, level) {
+    const stage = document.getElementById('trial-stage');
+    stage.innerHTML = `
+      <div class="fb-box ${correct ? 'fb-correct' : 'fb-wrong'} pop">
+        <div class="fb-title">${correct ? '✓ Correct' : '✗ Incorrect'}</div>
+        ${!correct ? `<div style="font-size:.8rem;margin-top:.3rem">Answer: <span class="fb-seq">${expected.join(' ')}</span></div>` : ''}
+        ${this._isPractice ? '<div style="font-size:.78rem;opacity:.75;margin-top:.25rem">Practice — not scored</div>' : ''}
+      </div>
+    `;
+    setTimeout(() => this._isPractice ? this._advancePractice(level) : this._advanceStaircase(level), this._TFB);
+  },
+
+  // ── Practice progression ──
+  _advancePractice(level) {
+    this._practiceLeft--;
+    if (this._practiceLeft > 0) {
+      this._runOneTrial(level);
+    } else {
+      document.getElementById('trial-stage').innerHTML = `
+        <div style="text-align:center" class="fade-up">
+          <div style="font-size:2rem;margin-bottom:.75rem">✓</div>
+          <h3 style="margin-bottom:.4rem">Practice complete</h3>
+          <p style="font-size:.875rem;color:var(--ink2);margin-bottom:1.25rem">You're ready for the real test.</p>
+          <button class="btn btn-primary btn-lg" onclick="DigitSpan.startActualTest()">Start test →</button>
+        </div>
+      `;
+      document.getElementById('t-status').textContent = 'Ready';
+      document.getElementById('t-dots').innerHTML = '';
+    }
+  },
+
+  // ── Staircase (WAIS-IV: 2 trials/level, advance if ≥1/2 correct) ──
+  _advanceStaircase(level) {
+    const maxL = this._cond === 'forward' ? 9 : 8;
+    const total = this._trialsHere.length;
+    const nCorrect = this._trialsHere.filter(t => t.correct).length;
+
+    if (total < 2) {
+      document.getElementById('t-status').textContent = `Trial ${total + 1} at length ${level}`;
+      this._buildDots();
+      this._runOneTrial(level);
+      return;
+    }
+
+    if (nCorrect >= 1) {
+      if (level >= maxL) { this._endCondition(); return; }
+      this._currentLevel = level + 1;
+      this._trialsHere = [];
+      document.getElementById('t-level').textContent = this._currentLevel;
+      document.getElementById('t-status').textContent = `Trial 1 at length ${this._currentLevel}`;
+      this._buildDots();
+      this._runOneTrial(this._currentLevel);
+    } else {
+      this._endCondition();
+    }
+  },
+
+  // ── Span computation ──
+  _computeSpan(cond) {
+    let span = 0;
+    const trials = this._allTrials.filter(t => t.condition === cond && !t.is_practice);
+    const levels = [...new Set(trials.map(t => t.level))].sort((a, b) => a - b);
+    for (const l of levels) {
+      if (trials.filter(t => t.level === l).some(t => t.correct)) span = l;
+    }
+    return span;
+  },
+
+  // ── End condition ──
+  _endCondition() {
+    if (this._cond === 'forward') {
+      this._fwdSpan = this._computeSpan('forward');
+      const fwdAll = this._allTrials.filter(t => t.condition === 'forward' && !t.is_practice);
+      const acc = fwdAll.length ? Math.round(fwdAll.filter(t => t.correct).length / fwdAll.length * 100) + '%' : '—';
+      document.getElementById('brk-span').textContent = this._fwdSpan;
+      document.getElementById('brk-acc').textContent = acc;
+      this._trialsHere = [];
+      showScreen('s-break');
+    } else {
+      this._bwdSpan = this._computeSpan('backward');
+      S.taskActive = false;
+      if (this._onComplete) this._onComplete(this._buildResults());
+    }
+  },
+
+  beginBackward() {
+    this._cond = 'backward';
+    this._showInstructions('backward');
+  },
+
+  // ── Build results object ──
+  _buildResults() {
+    const real = this._allTrials.filter(t => !t.is_practice);
+    const rtVals = real.filter(t => t.rt_ms !== null && t.correct).map(t => t.rt_ms);
+    const meanRT = rtVals.length ? rtVals.reduce((a, b) => a + b, 0) / rtVals.length / 1000 : 0;
+    const rawScore = real.filter(t => t.correct).length;
+    const errors = real.filter(t => !t.correct);
+
+    // Serial position curve
+    const spCurve = { forward: [], backward: [] };
+    for (const cond of ['forward', 'backward']) {
+      const condTrials = real.filter(t => t.condition === cond && t.response && t.response.length > 0);
+      const maxLen = condTrials.length ? Math.max(...condTrials.map(t => t.stimulus.length)) : 0;
+      for (let pos = 0; pos < maxLen; pos++) {
+        const atPos = condTrials.filter(t => t.stimulus.length > pos && t.position_errors);
+        if (!atPos.length) { spCurve[cond].push(null); continue; }
+        const correct = atPos.filter(t => {
+          const bits = t.position_errors.split(',').map(Number);
+          return bits[pos] === 1;
+        }).length;
+        spCurve[cond].push(Math.round(correct / atPos.length * 100));
+      }
+    }
+
+    // rt_outlier flagging per condition (for export)
+    for (const cond of ['forward', 'backward']) {
+      const condReal = real.filter(t => t.condition === cond && t.rt_ms !== null);
+      const mean = condReal.length ? condReal.reduce((a, b) => a + b.rt_ms, 0) / condReal.length : 0;
+      const sd = condReal.length > 1 ? Math.sqrt(condReal.reduce((s, t) => s + (t.rt_ms - mean) ** 2, 0) / condReal.length) : 0;
+      for (const t of condReal) {
+        t.rt_outlier = t.rt_ms < 200 || t.rt_ms > mean + 3 * sd;
+      }
+    }
+
+    return {
+      forwardSpan: this._fwdSpan,
+      backwardSpan: this._bwdSpan,
+      rawScore,
+      meanRT,
+      trials: this._allTrials,
+      errorBreakdown: {
+        transposition: errors.filter(t => t.error_type === 'transposition').length,
+        substitution: errors.filter(t => t.error_type === 'substitution').length,
+        length: errors.filter(t => t.error_type === 'length').length,
+      },
+      serialPositionCurve: spCurve,
+    };
+  },
+
+  _buildAccuracyRows(real, fwdSpan, bwdSpan) {
+    let html = '';
+    for (const cond of ['forward', 'backward']) {
+      const ct = real.filter(t => t.condition === cond);
+      const ls = [...new Set(ct.map(t => t.level))].sort((a, b) => a - b);
+      const span = cond === 'forward' ? fwdSpan : bwdSpan;
+      for (const l of ls) {
+        const at = ct.filter(t => t.level === l);
+        const n = at.length, c = at.filter(t => t.correct).length;
+        const acc = n ? Math.round(c / n * 100) : 0;
+        const clr = acc >= 50 ? 'var(--green)' : 'var(--red)';
+        html += `<tr>
+          <td style="font-family:var(--mono);font-weight:600">${l}</td>
+          <td><span class="badge ${cond === 'forward' ? 'badge-blue' : 'badge-amber'}">${cond}</span></td>
+          <td>${n}</td><td>${c}</td>
+          <td>
+            <div class="acc-wrap"><div class="acc-fill" style="width:${acc}%;background:${clr}"></div></div>
+            ${acc}%
+            ${l === span ? '<span class="badge badge-green" style="font-size:.68rem;padding:1px 6px;margin-left:4px">span</span>' : ''}
+          </td>
+        </tr>`;
+      }
+    }
+    return html;
+  },
+};
+
+// ── Results display (standalone) ──
+function showDigitSpanResults() {
   showScreen('s-results');
-  const real = S.allTrials.filter(t => !t.isPractice);
-  const rtVals = real.map(t => t.rtMs);
-  const meanRT = rtVals.length ? (rtVals.reduce((a, b) => a + b, 0) / rtVals.length / 1000).toFixed(2) : '—';
-  const rawScore = real.filter(t => t.correct).length;
+  const results = S.results.digitSpan;
+  const real = results.trials.filter(t => !t.is_practice);
+  const meanRT = results.meanRT;
 
   document.getElementById('r-pid').textContent = S.pid;
-  document.getElementById('r-fspan').textContent = S.fwdSpan;
-  document.getElementById('r-bspan').textContent = S.bwdSpan;
-  document.getElementById('r-raw').textContent = rawScore;
-  document.getElementById('r-rt').textContent = meanRT;
+  document.getElementById('r-fspan').textContent = results.forwardSpan;
+  document.getElementById('r-bspan').textContent = results.backwardSpan;
+  document.getElementById('r-raw').textContent = results.rawScore;
+  document.getElementById('r-rt').textContent = typeof meanRT === 'number' ? meanRT.toFixed(2) : '—';
 
   // Accuracy table
   const accBody = document.getElementById('r-acc-body');
-  accBody.innerHTML = '';
-  for (const cond of ['forward', 'backward']) {
-    const ct = real.filter(t => t.condition === cond);
-    const ls = [...new Set(ct.map(t => t.level))].sort((a, b) => a - b);
-    const span = cond === 'forward' ? S.fwdSpan : S.bwdSpan;
-    for (const l of ls) {
-      const at = ct.filter(t => t.level === l);
-      const n = at.length, c = at.filter(t => t.correct).length;
-      const acc = n ? Math.round(c / n * 100) : 0;
-      const clr = acc >= 50 ? 'var(--green)' : 'var(--red)';
-      accBody.innerHTML += `<tr>
-        <td style="font-family:var(--mono);font-weight:600">${l}</td>
-        <td><span class="badge ${cond === 'forward' ? 'badge-blue' : 'badge-amber'}">${cond}</span></td>
-        <td>${n}</td><td>${c}</td>
-        <td>
-          <div class="acc-wrap"><div class="acc-fill" style="width:${acc}%;background:${clr}"></div></div>
-          ${acc}%
-          ${l === span ? '<span class="badge badge-green" style="font-size:.68rem;padding:1px 6px;margin-left:4px">span</span>' : ''}
-        </td>
-      </tr>`;
-    }
-  }
+  accBody.innerHTML = DigitSpan._buildAccuracyRows(real, results.forwardSpan, results.backwardSpan);
 
   // Error analysis
-  const errs = real.filter(t => !t.correct);
-  document.getElementById('r-etrans').textContent = errs.filter(t => t.errorType === 'transposition').length;
-  document.getElementById('r-esub').textContent = errs.filter(t => t.errorType === 'substitution').length;
-  document.getElementById('r-elen').textContent = errs.filter(t => t.errorType === 'length').length;
+  document.getElementById('r-etrans').textContent = results.errorBreakdown.transposition;
+  document.getElementById('r-esub').textContent = results.errorBreakdown.substitution;
+  document.getElementById('r-elen').textContent = results.errorBreakdown.length;
 
   // Full log
   const logBody = document.getElementById('r-trial-body');
   logBody.innerHTML = '';
   for (const t of real) {
-    const shown = t.sequenceShown.split('').join(' ');
-    const typed = t.responseTyped ? t.responseTyped.split('').join(' ') : '—';
+    const shown = t.stimulus.split('').join(' ');
+    const typed = t.response ? t.response.split('').join(' ') : '—';
     logBody.innerHTML += `<tr>
-      <td style="font-family:var(--mono)">${t.trialNo}</td>
+      <td style="font-family:var(--mono)">${t.trial_no}</td>
       <td><span class="badge ${t.condition === 'forward' ? 'badge-blue' : 'badge-amber'}" style="font-size:.68rem">${t.condition.slice(0,3)}</span></td>
       <td>${t.level}</td>
       <td style="font-family:var(--mono);letter-spacing:.1em">${shown}</td>
       <td style="font-family:var(--mono);letter-spacing:.1em">${typed}</td>
       <td><span class="badge ${t.correct ? 'badge-green' : 'badge-red'}">${t.correct ? '✓' : '✗'}</span></td>
-      <td style="font-size:.8rem">${(t.rtMs / 1000).toFixed(2)}s</td>
-      <td style="font-size:.78rem;color:var(--ink3)">${t.errorType}</td>
+      <td style="font-size:.8rem">${t.rt_ms !== null ? (t.rt_ms / 1000).toFixed(2) + 's' : '—'}</td>
+      <td style="font-size:.78rem;color:var(--ink3)">${t.error_type}</td>
     </tr>`;
   }
 
   // RT chart
   requestAnimationFrame(() => drawRTChart(real));
+
+  // Serial position curve
+  requestAnimationFrame(() => drawSPCurve(results.serialPositionCurve));
 }
 
-// ── RT Chart ─────────────────────────────────────────────────────────
+// ── RT Chart ──
 function drawRTChart(trials) {
   const canvas = document.getElementById('rt-canvas');
   const dpr = window.devicePixelRatio || 1;
@@ -707,12 +908,11 @@ function drawRTChart(trials) {
 
   if (!trials.length) return;
 
-  // Compute mean RT per (condition, level)
   const agg = {};
   for (const t of trials) {
     const k = `${t.condition}|${t.level}`;
     if (!agg[k]) agg[k] = { cond: t.condition, level: t.level, sum: 0, n: 0 };
-    agg[k].sum += t.rtMs; agg[k].n++;
+    agg[k].sum += t.rt_ms; agg[k].n++;
   }
   const pts = Object.values(agg).map(a => ({ cond: a.cond, level: a.level, rt: a.sum / a.n / 1000 }));
 
@@ -724,25 +924,21 @@ function drawRTChart(trials) {
   const xS = l => PAD.l + ((l - minLvl) / Math.max(maxLvl - minLvl, 1)) * cW;
   const yS = r => PAD.t + cH * (1 - r / maxRT);
 
-  // Grid
   ctx.strokeStyle = 'rgba(0,0,0,.06)'; ctx.lineWidth = 1;
   for (let i = 0; i <= 4; i++) {
     const y = PAD.t + cH * (i / 4);
     ctx.beginPath(); ctx.moveTo(PAD.l, y); ctx.lineTo(PAD.l + cW, y); ctx.stroke();
   }
 
-  // Y labels
   ctx.fillStyle = '#9c9a95'; ctx.font = `10px 'IBM Plex Mono',monospace`; ctx.textAlign = 'right';
   for (let i = 0; i <= 4; i++) {
     const val = (maxRT * (1 - i / 4)).toFixed(1);
     ctx.fillText(val + 's', PAD.l - 5, PAD.t + cH * (i / 4) + 4);
   }
 
-  // X labels
   ctx.textAlign = 'center';
   allLvls.forEach(l => ctx.fillText(l, xS(l), H - 6));
 
-  // Lines
   const fwd = pts.filter(p => p.cond === 'forward').sort((a, b) => a.level - b.level);
   const bwd = pts.filter(p => p.cond === 'backward').sort((a, b) => a.level - b.level);
 
@@ -758,8 +954,7 @@ function drawRTChart(trials) {
   drawLine(fwd, '#2448c0');
   drawLine(bwd, '#8a4e00', [5, 3]);
 
-  // Legend
-  ctx.font = `11px 'DM Sans',sans-serif`; ctx.textAlign = 'left'; ctx.fillStyle = '#9c9a95';
+  ctx.font = `11px 'DM Sans',sans-serif`; ctx.textAlign = 'left';
   ctx.fillStyle = '#2448c0'; ctx.fillRect(PAD.l, PAD.t - 6, 18, 3);
   ctx.fillStyle = '#63605b'; ctx.fillText('Forward', PAD.l + 22, PAD.t + 4);
   ctx.setLineDash([5, 3]); ctx.strokeStyle = '#8a4e00'; ctx.lineWidth = 2;
@@ -767,14 +962,85 @@ function drawRTChart(trials) {
   ctx.setLineDash([]); ctx.fillStyle = '#63605b'; ctx.fillText('Backward', PAD.l + 112, PAD.t + 4);
 }
 
-// ── CSV Export ───────────────────────────────────────────────────────
+// ── Serial position curve chart ──
+function drawSPCurve(spCurve) {
+  const canvas = document.getElementById('sp-canvas');
+  if (!canvas) return;
+  const dpr = window.devicePixelRatio || 1;
+  const W = canvas.offsetWidth || 540;
+  const H = 140;
+  canvas.width = W * dpr; canvas.height = H * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  const PAD = { t: 16, r: 16, b: 28, l: 34 };
+  const cW = W - PAD.l - PAD.r, cH = H - PAD.t - PAD.b;
+  const allVals = [...(spCurve.forward || []), ...(spCurve.backward || [])].filter(v => v !== null);
+  if (!allVals.length) return;
+  const maxPos = Math.max(spCurve.forward.length, spCurve.backward.length);
+
+  ctx.strokeStyle = 'rgba(0,0,0,.06)'; ctx.lineWidth = 1;
+  for (let i = 0; i <= 5; i++) {
+    const y = PAD.t + cH * (1 - i / 5);
+    ctx.beginPath(); ctx.moveTo(PAD.l, y); ctx.lineTo(PAD.l + cW, y); ctx.stroke();
+    ctx.fillStyle = '#9c9a95'; ctx.font = `9px 'IBM Plex Mono',monospace`; ctx.textAlign = 'right';
+    ctx.fillText(String(i * 20) + '%', PAD.l - 4, y + 3);
+  }
+
+  ctx.textAlign = 'center'; ctx.fillStyle = '#9c9a95';
+  for (let i = 1; i <= maxPos; i++) {
+    ctx.fillText(String(i), PAD.l + (i - 0.5) / maxPos * cW, H - 4);
+  }
+
+  function drawCurve(data, color, dash = []) {
+    const pts = data.map((v, i) => v !== null ? { x: PAD.l + (i + 0.5) / maxPos * cW, y: PAD.t + cH * (1 - v / 100) } : null).filter(p => p);
+    if (pts.length < 2) return;
+    ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.setLineDash(dash);
+    ctx.beginPath();
+    pts.forEach((p, i) => { i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y); });
+    ctx.stroke(); ctx.setLineDash([]);
+    pts.forEach(p => { ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, Math.PI * 2); ctx.fillStyle = color; ctx.fill(); });
+  }
+
+  if (spCurve.forward && spCurve.forward.some(v => v !== null)) drawCurve(spCurve.forward, '#2448c0');
+  if (spCurve.backward && spCurve.backward.some(v => v !== null)) drawCurve(spCurve.backward, '#8a4e00', [4, 3]);
+
+  ctx.font = `9px 'DM Sans',sans-serif`; ctx.textAlign = 'left';
+  ctx.fillStyle = '#2448c0'; ctx.fillRect(PAD.l, 6, 14, 2);
+  ctx.fillStyle = '#63605b'; ctx.fillText('Forward', PAD.l + 18, 11);
+  ctx.setLineDash([4, 3]); ctx.strokeStyle = '#8a4e00'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(PAD.l + 70, 7); ctx.lineTo(PAD.l + 84, 7); ctx.stroke();
+  ctx.setLineDash([]); ctx.fillStyle = '#63605b'; ctx.fillText('Backward', PAD.l + 88, 11);
+}
+
+// ── CSV Export (SPEC data model) ──
 function downloadCSV() {
-  const real = S.allTrials.filter(t => !t.isPractice);
-  const header = 'participant_id,condition,trial_no,level,sequence_shown,correct_answer,response_typed,correct,error_type,rt_ms,timestamp';
-  const rows = real.map(t =>
-    [t.pid, t.condition, t.trialNo, t.level, t.sequenceShown,
-     t.correctAnswer, t.responseTyped, t.correct ? 1 : 0,
-     t.errorType, t.rtMs, t.timestamp].join(',')
+  const results = S.results.digitSpan;
+  if (!results) return;
+  const sessionMeta = {
+    participant_id: S.pid,
+    age: S.demographics.age || '',
+    gender: S.demographics.gender || '',
+    native_language: S.demographics.native_language || '',
+    sleep_hours: S.demographics.sleep_hours || '',
+    caffeine: S.demographics.caffeine || '',
+    handedness: S.demographics.handedness || '',
+    vision: S.demographics.vision || '',
+    screen_width: S.deviceMeta.screen_width || '',
+    screen_height: S.deviceMeta.screen_height || '',
+    user_agent: S.deviceMeta.user_agent || '',
+  };
+  const header = Object.keys(sessionMeta).join(',') +
+    ',task,condition,block,trial_no,level,stimulus,correct_answer,response,correct,error_type,rt_ms,rt_outlier,is_practice,position_errors,timestamp';
+  const metaVals = Object.values(sessionMeta);
+  const rows = results.trials.map(t =>
+    [...metaVals,
+      t.task, t.condition, t.block, t.trial_no, t.level,
+      t.stimulus, t.correct_answer, t.response,
+      t.correct ? 1 : 0, t.error_type, t.rt_ms,
+      t.rt_outlier ? 1 : 0, t.is_practice ? 1 : 0,
+      t.position_errors, t.timestamp,
+    ].join(',')
   );
   const blob = new Blob([[header, ...rows].join('\n')], { type: 'text/csv' });
   const a = document.createElement('a');
@@ -783,12 +1049,11 @@ function downloadCSV() {
   a.click(); URL.revokeObjectURL(a.href);
 }
 
-// ── Restart ──────────────────────────────────────────────────────────
+// ── Restart ──
 function restartAll() {
   Object.assign(S, {
-    pid: '', rng: null, condition: 'forward', isPractice: false,
-    currentLevel: 3, trialsHere: [], allTrials: [],
-    fwdSpan: 0, bwdSpan: 0, practiceLeft: 2, inputRevealTime: 0,
+    pid: '', demographics: {}, deviceMeta: {}, taskOrder: [], taskActive: false,
+    results: { digitSpan: null },
   });
   showScreen('s-welcome');
 }
