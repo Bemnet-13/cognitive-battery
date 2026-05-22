@@ -308,6 +308,40 @@ function downloadJSON() {
   a.click(); URL.revokeObjectURL(a.href);
 }
 
+// ── Gemini AI Analysis ──
+function analyzeWithGemini() {
+  const key = document.getElementById('gemini-key').value.trim();
+  if (!key) { alert('Please enter a Gemini API key'); return; }
+  const btn = document.querySelector('[onclick="analyzeWithGemini()"]');
+  btn.disabled = true; btn.textContent = 'Analyzing…';
+  const div = document.getElementById('r-analysis');
+  div.style.display = 'block';
+  div.innerHTML = '<div style="text-align:center;padding:1.5rem;color:var(--ink3)">Analyzing results with Gemini…</div>';
+  const payload = buildAnalysisPayload();
+  const prompt = `You are a cognitive science research assistant. Analyze these cognitive assessment results and give a concise overall insight (2-3 paragraphs). Focus on what the scores indicate, patterns across tasks, and notable observations. Use plain language.\n\n${JSON.stringify(payload, null, 2)}`;
+  fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${encodeURIComponent(key)}`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+  })
+  .then(r => { if (!r.ok) throw new Error(`API error ${r.status}`); return r.json(); })
+  .then(data => {
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || 'No analysis returned.';
+    div.innerHTML = `<div class="card" style="background:var(--surf2);border:1px solid var(--bd);padding:1.25rem;line-height:1.8;font-size:.9rem;text-align:left">${text.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}</div>`;
+  })
+  .catch(err => { div.innerHTML = `<div class="fb-box fb-wrong" style="margin:0">Error: ${err.message}</div>`; })
+  .finally(() => { btn.disabled = false; btn.textContent = 'Analyze with Gemini'; });
+}
+function buildAnalysisPayload() {
+  const r = S.results;
+  return {
+    participant: S.pid, demographics: S.demographics,
+    digitSpan: r.digitSpan ? { forwardSpan: r.digitSpan.forwardSpan, backwardSpan: r.digitSpan.backwardSpan, rawScore: r.digitSpan.rawScore, errorBreakdown: r.digitSpan.errorBreakdown } : null,
+    corsi: r.corsi ? { forwardSpan: r.corsi.forwardSpan, backwardSpan: r.corsi.backwardSpan, kesselsTotal: r.corsi.kesselsTotal } : null,
+    nback: r.nback ? { dPrime1: r.nback.dPrime1, dPrime2: r.nback.dPrime2, block1: r.nback.block1Stats ? { hitRate: r.nback.block1Stats.hitRate, faRate: r.nback.block1Stats.faRate, accuracy: r.nback.block1Stats.accuracy } : null, block2: r.nback.block2Stats ? { hitRate: r.nback.block2Stats.hitRate, faRate: r.nback.block2Stats.faRate, accuracy: r.nback.block2Stats.accuracy, lureFaRate: r.nback.block2Stats.lureFaRate } : null } : null,
+    stroop: r.stroop ? { interferenceScore: r.stroop.interferenceScore, facilitationScore: r.stroop.facilitationScore, netStroopEffect: r.stroop.netStroopEffect } : null,
+  };
+}
+
 // ── Restart ──
 function restartAll() {
   Object.assign(S, {

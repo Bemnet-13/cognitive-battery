@@ -43,7 +43,7 @@ const Stroop = {
         ${this._COLORS.map(c => `<span class="key-tag">${this._KEY_OF[c].toUpperCase()} = ${this._NAME_OF[c]}</span>`).join('')}
       </div>
       <ul style="font-size:.85rem;color:var(--ink2);padding-left:1.25rem;line-height:2;margin-bottom:.5rem;text-align:left;width:100%">
-        <li>72 trials — respond as quickly and accurately as possible</li>
+        <li>18 trials — respond as quickly and accurately as possible</li>
         <li>Press the key matching the <strong>ink colour</strong>, not the word</li>
         <li>Respond within 4 seconds — timeout counts as incorrect</li>
       </ul>
@@ -150,7 +150,7 @@ const Stroop = {
 
   _startPractice() {
     this._isPractice = true;
-    this._trials = this._generateTrials(6);
+    this._trials = this._generateTrials(3);
     this._allResults = [];
     this._currentIdx = 0;
     this._runNext();
@@ -158,7 +158,7 @@ const Stroop = {
 
   _startTest() {
     this._isPractice = false;
-    this._trials = this._generateTrials(72);
+    this._trials = this._generateTrials(18);
     this._allResults = [];
     this._currentIdx = 0;
     this._runNext();

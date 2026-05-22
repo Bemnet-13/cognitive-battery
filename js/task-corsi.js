@@ -182,6 +182,7 @@ const Corsi = {
   },
 
   _startInput(seq) {
+    this._submitted = false;
     this._userClicks = [];
     this._waitingInput = true;
     this._inputStart = performance.now();
@@ -379,7 +380,7 @@ const Corsi = {
   },
 
   _advanceStaircase() {
-    const maxL = 8;
+    const maxL = 5;
     const total = this._trialsHere.length;
     const nCorrect = this._trialsHere.filter(t => t.correct).length;
     if (total < 2) {

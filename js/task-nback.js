@@ -48,7 +48,7 @@ const NBack = {
           the previous one.<br>
           <strong>2-back:</strong> Press spacebar when the letter matches the one <strong>two
           steps back</strong>.<br><br>
-          You'll start with 1-back (20 trials), then 2-back (20 trials).
+          You'll start with           1-back (8 trials), then 2-back (8 trials).
         </div>
       </div>
       <ul style="font-size:.85rem;color:var(--ink2);padding-left:1.25rem;line-height:2;margin-bottom:.5rem;text-align:left;width:100%">
@@ -57,7 +57,7 @@ const NBack = {
         <li>Respond as quickly <em>and</em> accurately as you can</li>
       </ul>
       <div style="display:flex;gap:.75rem;margin-top:.75rem">
-        <button class="btn" style="flex:1" onclick="NBack._startPractice()">Practice (5 trials)</button>
+        <button class="btn" style="flex:1" onclick="NBack._startPractice()">Practice (3 trials)</button>
         <button class="btn btn-primary" style="flex:1" onclick="NBack._startTest()">Start test →</button>
       </div>
     `;
@@ -175,7 +175,7 @@ const NBack = {
     this._isPractice = true;
     this._blockLabel = '1-back';
     this._nBack = 1;
-    this._currentTrials = this._generateBlock(1, 1, 5);
+    this._currentTrials = this._generateBlock(1, 1, 3);
     this._currentTrialIdx = 0;
     this._allResults = [];
     showScreen('s-nback');
@@ -188,12 +188,12 @@ const NBack = {
     this._isPractice = false;
     this._blockLabel = '1-back';
     this._nBack = 1;
-    this._currentTrials = this._generateBlock(1, 2, 20);
+    this._currentTrials = this._generateBlock(1, 2, 8);
     this._currentTrialIdx = 0;
     this._allResults = [];
     showScreen('s-nback');
     document.getElementById('nb-status').textContent = '1-back';
-    document.getElementById('nb-progress').textContent = '0 / 20';
+    document.getElementById('nb-progress').textContent = '0 / 8';
     this._runTrial();
   },
 
@@ -205,7 +205,7 @@ const NBack = {
     const trial = this._currentTrials[this._currentTrialIdx];
     if (!trial.isWarmup) {
       const testIdx = this._allResults.filter(t => !t.is_practice).length + 1;
-      const totalTest = 20;
+      const totalTest = 8;
       document.getElementById('nb-progress').textContent = `${testIdx} / ${totalTest}`;
     }
     this._responded = false;
@@ -315,7 +315,7 @@ const NBack = {
     } else if (this._blockLabel === '1-back') {
       this._blockLabel = '2-back';
       this._nBack = 2;
-      this._currentTrials = this._generateBlock(2, 2, 20);
+      this._currentTrials = this._generateBlock(2, 2, 8);
       this._currentTrialIdx = 0;
       const stage = document.getElementById('nb-stage');
       stage.innerHTML = `
@@ -327,7 +327,7 @@ const NBack = {
       setTimeout(() => {
         showScreen('s-nback');
         document.getElementById('nb-status').textContent = '2-back';
-        document.getElementById('nb-progress').textContent = '0 / 20';
+        document.getElementById('nb-progress').textContent = '0 / 8';
         this._runTrial();
       }, 2000);
     } else {

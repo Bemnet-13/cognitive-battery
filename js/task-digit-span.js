@@ -199,7 +199,7 @@ const DigitSpan = {
         </div>
       </div>
       <ul style="font-size:.875rem;color:var(--ink2);padding-left:1.25rem;line-height:2">
-        <li>Sequences start at length ${fwd ? '3' : '2'} and increase to ${fwd ? '9' : '8'}</li>
+        <li>Sequences start at length ${fwd ? '3' : '2'} and increase to 5</li>
         <li>2 trials per length — pass if at least 1 is correct</li>
         <li>Type digits without spaces · press <span style="font-family:var(--mono)">Enter</span> to submit</li>
       </ul>
@@ -233,7 +233,7 @@ const DigitSpan = {
 
   _buildDots() {
     const minL = this._cond === 'backward' ? 2 : 3;
-    const maxL = this._cond === 'forward' ? 9 : 8;
+    const maxL = 5;
     let html = '';
     for (let l = minL; l <= maxL; l++) {
       const here = this._allTrials.filter(t => t.level === l && t.condition === this._cond && !t.isPractice);
@@ -416,7 +416,7 @@ const DigitSpan = {
   },
 
   _advanceStaircase(level) {
-    const maxL = this._cond === 'forward' ? 9 : 8;
+    const maxL = 5;
     const total = this._trialsHere.length;
     const nCorrect = this._trialsHere.filter(t => t.correct).length;
 

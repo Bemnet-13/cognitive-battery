@@ -1,289 +1,805 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Cognitive Assessment Battery</title>
-<link rel="stylesheet" href="css/style.css">
-</head>
-<body>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Cognitive Assessment Battery</title>
+        <link rel="stylesheet" href="css/style.css" />
+    </head>
+    <body>
+        <!-- Mobile warning overlay -->
+        <div id="s-mobile-warning" class="mobile-warning">
+            <div>
+                <div style="font-size: 2.5rem; margin-bottom: 1rem">🖥</div>
+                <h2>Desktop browser required</h2>
+                <p>
+                    Please open this assessment on a desktop or laptop browser
+                    for the best experience.
+                </p>
+            </div>
+        </div>
 
-<!-- Mobile warning overlay -->
-<div id="s-mobile-warning" class="mobile-warning">
-  <div>
-    <div style="font-size:2.5rem;margin-bottom:1rem">🖥</div>
-    <h2>Desktop browser required</h2>
-    <p>Please open this assessment on a desktop or laptop browser for the best experience.</p>
-  </div>
-</div>
+        <div id="app" class="app-content">
+            <!-- WELCOME -->
+            <div id="s-welcome" class="screen active">
+                <div class="card">
+                    <div style="text-align: center; padding: 1rem 0 1.5rem">
+                        <div
+                            class="badge badge-blue"
+                            style="
+                                margin-bottom: 1rem;
+                                font-size: 0.8rem;
+                                padding: 4px 14px;
+                                letter-spacing: 0.04em;
+                            "
+                        >
+                            Working Memory · Cognitive Science
+                        </div>
+                        <h1 style="margin-bottom: 0.5rem">
+                            Cognitive Assessment Battery
+                        </h1>
+                        <p
+                            style="
+                                max-width: 420px;
+                                margin: 0 auto;
+                                font-size: 0.95rem;
+                            "
+                        >
+                            A series of four standardised tasks measuring
+                            working memory, executive function, and selective
+                            attention.
+                        </p>
+                    </div>
+                    <div class="info-grid">
+                        <div class="info-cell">
+                            <div class="label">Duration</div>
+                            <span>20 – 30 minutes</span>
+                        </div>
+                        <div class="info-cell">
+                            <div class="label">Tasks</div>
+                            <span>4</span>
+                        </div>
+                        <div class="info-cell">
+                            <div class="label">Framework</div>
+                            <span>Baddeley's WM model</span>
+                        </div>
+                        <div class="info-cell">
+                            <div class="label">Output</div>
+                            <span>CSV + JSON export</span>
+                        </div>
+                    </div>
+                    <div style="text-align: center">
+                        <button
+                            class="btn btn-primary btn-lg"
+                            onclick="showScreen('s-consent')"
+                        >
+                            Begin assessment →
+                        </button>
+                    </div>
+                    <p class="footnote">
+                        Baddeley & Hitch (1974) · Milner (1971) · Kirchner
+                        (1958) · Stroop (1935) · Jaeggi et al. (2008)
+                    </p>
+                </div>
+            </div>
 
-<div id="app" class="app-content">
+            <!-- CONSENT -->
+            <div id="s-consent" class="screen">
+                <div class="card fade-up">
+                    <h2 style="margin-bottom: 0.25rem">Informed consent</h2>
+                    <p style="font-size: 0.85rem; margin-bottom: 1.25rem">
+                        Please read carefully before proceeding.
+                    </p>
+                    <div
+                        style="
+                            background: var(--surf2);
+                            border: 1px solid var(--bd);
+                            border-radius: var(--r-sm);
+                            padding: 1rem 1.25rem;
+                            margin-bottom: 1.25rem;
+                            font-size: 0.86rem;
+                            color: var(--ink2);
+                            line-height: 1.75;
+                        "
+                    >
+                        <p>
+                            <strong style="color: var(--ink)">Purpose.</strong>
+                            This battery assesses working memory and executive
+                            function using four standardised computerised tasks.
+                            Data are collected for academic coursework purposes
+                            only.
+                        </p>
+                        <p style="margin-top: 0.5rem">
+                            <strong style="color: var(--ink)"
+                                >Anonymity.</strong
+                            >
+                            Your responses are identified only by a participant
+                            code. No personally identifiable information is
+                            collected or stored.
+                        </p>
+                        <p style="margin-top: 0.5rem">
+                            <strong style="color: var(--ink)"
+                                >Withdrawal.</strong
+                            >
+                            You may close this page at any time without
+                            consequence.
+                        </p>
+                    </div>
+                    <div class="checkbox-row">
+                        <input
+                            type="checkbox"
+                            id="c1"
+                            onchange="checkConsent()"
+                        />
+                        <label for="c1"
+                            >I have read the information above and voluntarily
+                            agree to participate.</label
+                        >
+                    </div>
+                    <div class="checkbox-row">
+                        <input
+                            type="checkbox"
+                            id="c2"
+                            onchange="checkConsent()"
+                        />
+                        <label for="c2"
+                            >I confirm I am 18 years of age or older.</label
+                        >
+                    </div>
+                    <div class="divider"></div>
+                    <div style="margin-bottom: 1.25rem">
+                        <label
+                            style="
+                                display: block;
+                                font-size: 0.875rem;
+                                font-weight: 500;
+                                margin-bottom: 0.5rem;
+                            "
+                            for="pid"
+                        >
+                            Participant ID
+                            <span style="color: var(--ink3); font-weight: 400"
+                                >(auto-generated, or enter your own)</span
+                            >
+                        </label>
+                        <div style="display: flex; gap: 0.5rem">
+                            <input
+                                type="text"
+                                id="pid"
+                                placeholder="e.g. P001"
+                                style="flex: 1"
+                                oninput="checkConsent()"
+                            />
+                            <button
+                                class="btn"
+                                onclick="genPID()"
+                                style="white-space: nowrap"
+                            >
+                                Generate
+                            </button>
+                        </div>
+                    </div>
+                    <button
+                        id="consent-btn"
+                        class="btn btn-primary btn-lg"
+                        onclick="beginAssessment()"
+                        disabled
+                        style="width: 100%"
+                    >
+                        Continue →
+                    </button>
+                </div>
+            </div>
 
-<!-- WELCOME -->
-<div id="s-welcome" class="screen active">
-<div class="card">
-  <div style="text-align:center;padding:1rem 0 1.5rem">
-    <div class="badge badge-blue" style="margin-bottom:1rem;font-size:.8rem;padding:4px 14px;letter-spacing:.04em">Working Memory · Cognitive Science</div>
-    <h1 style="margin-bottom:.5rem">Cognitive Assessment Battery</h1>
-    <p style="max-width:420px;margin:0 auto;font-size:.95rem">A series of four standardised tasks measuring working memory, executive function, and selective attention.</p>
-  </div>
-  <div class="info-grid">
-    <div class="info-cell"><div class="label">Duration</div><span>20 – 30 minutes</span></div>
-    <div class="info-cell"><div class="label">Tasks</div><span>4</span></div>
-    <div class="info-cell"><div class="label">Framework</div><span>Baddeley's WM model</span></div>
-    <div class="info-cell"><div class="label">Output</div><span>CSV + JSON export</span></div>
-  </div>
-  <div style="text-align:center">
-    <button class="btn btn-primary btn-lg" onclick="showScreen('s-consent')">Begin assessment →</button>
-  </div>
-  <p class="footnote">Baddeley & Hitch (1974) · Milner (1971) · Kirchner (1958) · Stroop (1935) · Jaeggi et al. (2008)</p>
-</div>
-</div>
+            <!-- DEMOGRAPHICS -->
+            <div id="s-demographics" class="screen">
+                <div class="card fade-up">
+                    <h2 style="margin-bottom: 0.25rem">Demographics</h2>
+                    <p style="font-size: 0.85rem; margin-bottom: 1.25rem">
+                        All fields required before proceeding.
+                    </p>
 
-<!-- CONSENT -->
-<div id="s-consent" class="screen">
-<div class="card fade-up">
-  <h2 style="margin-bottom:.25rem">Informed consent</h2>
-  <p style="font-size:.85rem;margin-bottom:1.25rem">Please read carefully before proceeding.</p>
-  <div style="background:var(--surf2);border:1px solid var(--bd);border-radius:var(--r-sm);padding:1rem 1.25rem;margin-bottom:1.25rem;font-size:.86rem;color:var(--ink2);line-height:1.75">
-    <p><strong style="color:var(--ink)">Purpose.</strong> This battery assesses working memory and executive function using four standardised computerised tasks. Data are collected for academic coursework purposes only.</p>
-    <p style="margin-top:.5rem"><strong style="color:var(--ink)">Anonymity.</strong> Your responses are identified only by a participant code. No personally identifiable information is collected or stored.</p>
-    <p style="margin-top:.5rem"><strong style="color:var(--ink)">Withdrawal.</strong> You may close this page at any time without consequence.</p>
-  </div>
-  <div class="checkbox-row">
-    <input type="checkbox" id="c1" onchange="checkConsent()">
-    <label for="c1">I have read the information above and voluntarily agree to participate.</label>
-  </div>
-  <div class="checkbox-row">
-    <input type="checkbox" id="c2" onchange="checkConsent()">
-    <label for="c2">I confirm I am 18 years of age or older.</label>
-  </div>
-  <div class="divider"></div>
-  <div style="margin-bottom:1.25rem">
-    <label style="display:block;font-size:.875rem;font-weight:500;margin-bottom:.5rem" for="pid">
-      Participant ID <span style="color:var(--ink3);font-weight:400">(auto-generated, or enter your own)</span>
-    </label>
-    <div style="display:flex;gap:.5rem">
-      <input type="text" id="pid" placeholder="e.g. P001" style="flex:1" oninput="checkConsent()">
-      <button class="btn" onclick="genPID()" style="white-space:nowrap">Generate</button>
-    </div>
-  </div>
-  <button id="consent-btn" class="btn btn-primary btn-lg" onclick="beginAssessment()" disabled style="width:100%">Continue →</button>
-</div>
-</div>
+                    <div style="margin-bottom: 1rem">
+                        <label
+                            class="label"
+                            for="d-age"
+                            style="margin-bottom: 0.35rem; display: block"
+                            >Age</label
+                        >
+                        <input
+                            type="number"
+                            id="d-age"
+                            min="10"
+                            max="120"
+                            placeholder="e.g. 25"
+                            oninput="checkDemographics()"
+                        />
+                    </div>
 
-<!-- DEMOGRAPHICS -->
-<div id="s-demographics" class="screen">
-<div class="card fade-up">
-  <h2 style="margin-bottom:.25rem">Demographics</h2>
-  <p style="font-size:.85rem;margin-bottom:1.25rem">All fields required before proceeding.</p>
+                    <div style="margin-bottom: 1rem">
+                        <label
+                            class="label"
+                            for="d-gender"
+                            style="margin-bottom: 0.35rem; display: block"
+                            >Gender</label
+                        >
+                        <input
+                            type="text"
+                            id="d-gender"
+                            placeholder="e.g. Female, Male"
+                            oninput="checkDemographics()"
+                        />
+                    </div>
 
-  <div style="margin-bottom:1rem">
-    <label class="label" for="d-age" style="margin-bottom:.35rem;display:block">Age</label>
-    <input type="number" id="d-age" min="10" max="120" placeholder="e.g. 25" oninput="checkDemographics()">
-  </div>
+                    <div style="margin-bottom: 1rem">
+                        <label
+                            class="label"
+                            for="d-lang"
+                            style="margin-bottom: 0.35rem; display: block"
+                            >Native language</label
+                        >
+                        <input
+                            type="text"
+                            id="d-lang"
+                            placeholder="e.g. English"
+                            oninput="checkDemographics()"
+                        />
+                    </div>
 
-  <div style="margin-bottom:1rem">
-    <label class="label" for="d-gender" style="margin-bottom:.35rem;display:block">Gender</label>
-    <input type="text" id="d-gender" placeholder="e.g. Female, Male, Non-binary" oninput="checkDemographics()">
-  </div>
+                    <div style="margin-bottom: 1rem">
+                        <label
+                            class="label"
+                            for="d-sleep"
+                            style="margin-bottom: 0.35rem; display: block"
+                            >Sleep last night (hours)</label
+                        >
+                        <input
+                            type="number"
+                            id="d-sleep"
+                            min="0"
+                            max="24"
+                            step="0.5"
+                            placeholder="e.g. 7"
+                            oninput="checkDemographics()"
+                        />
+                    </div>
 
-  <div style="margin-bottom:1rem">
-    <label class="label" for="d-lang" style="margin-bottom:.35rem;display:block">Native language</label>
-    <input type="text" id="d-lang" placeholder="e.g. English" oninput="checkDemographics()">
-  </div>
+                    <div style="margin-bottom: 1rem">
+                        <label
+                            class="label"
+                            style="margin-bottom: 0.25rem; display: block"
+                            >Caffeine in the last 2 hours?</label
+                        >
+                        <div class="radio-group">
+                            <label
+                                ><input
+                                    type="radio"
+                                    name="d-caffeine"
+                                    value="yes"
+                                    onchange="checkDemographics()"
+                                />
+                                Yes</label
+                            >
+                            <label
+                                ><input
+                                    type="radio"
+                                    name="d-caffeine"
+                                    value="no"
+                                    onchange="checkDemographics()"
+                                />
+                                No</label
+                            >
+                        </div>
+                    </div>
 
-  <div style="margin-bottom:1rem">
-    <label class="label" for="d-sleep" style="margin-bottom:.35rem;display:block">Sleep last night (hours)</label>
-    <input type="number" id="d-sleep" min="0" max="24" step="0.5" placeholder="e.g. 7" oninput="checkDemographics()">
-  </div>
+                    <div style="margin-bottom: 1rem">
+                        <label
+                            class="label"
+                            style="margin-bottom: 0.25rem; display: block"
+                            >Handedness</label
+                        >
+                        <div class="radio-group">
+                            <label
+                                ><input
+                                    type="radio"
+                                    name="d-handedness"
+                                    value="left"
+                                    onchange="checkDemographics()"
+                                />
+                                Left</label
+                            >
+                            <label
+                                ><input
+                                    type="radio"
+                                    name="d-handedness"
+                                    value="right"
+                                    onchange="checkDemographics()"
+                                />
+                                Right</label
+                            >
+                            <label
+                                ><input
+                                    type="radio"
+                                    name="d-handedness"
+                                    value="ambidextrous"
+                                    onchange="checkDemographics()"
+                                />
+                                Ambidextrous</label
+                            >
+                        </div>
+                    </div>
 
-  <div style="margin-bottom:1rem">
-    <label class="label" style="margin-bottom:.25rem;display:block">Caffeine in the last 2 hours?</label>
-    <div class="radio-group">
-      <label><input type="radio" name="d-caffeine" value="yes" onchange="checkDemographics()"> Yes</label>
-      <label><input type="radio" name="d-caffeine" value="no" onchange="checkDemographics()"> No</label>
-    </div>
-  </div>
+                    <div style="margin-bottom: 1.25rem">
+                        <label
+                            class="label"
+                            style="margin-bottom: 0.25rem; display: block"
+                            >Vision correction</label
+                        >
+                        <div class="radio-group">
+                            <label
+                                ><input
+                                    type="radio"
+                                    name="d-vision"
+                                    value="normal"
+                                    onchange="checkDemographics()"
+                                />
+                                Normal</label
+                            >
+                            <label
+                                ><input
+                                    type="radio"
+                                    name="d-vision"
+                                    value="corrected-to-normal"
+                                    onchange="checkDemographics()"
+                                />
+                                Corrected-to-normal</label
+                            >
+                        </div>
+                    </div>
 
-  <div style="margin-bottom:1rem">
-    <label class="label" style="margin-bottom:.25rem;display:block">Handedness</label>
-    <div class="radio-group">
-      <label><input type="radio" name="d-handedness" value="left" onchange="checkDemographics()"> Left</label>
-      <label><input type="radio" name="d-handedness" value="right" onchange="checkDemographics()"> Right</label>
-      <label><input type="radio" name="d-handedness" value="ambidextrous" onchange="checkDemographics()"> Ambidextrous</label>
-    </div>
-  </div>
+                    <button
+                        id="demo-btn"
+                        class="btn btn-primary btn-lg"
+                        onclick="submitDemographics()"
+                        disabled
+                        style="width: 100%"
+                    >
+                        Continue →
+                    </button>
+                </div>
+            </div>
 
-  <div style="margin-bottom:1.25rem">
-    <label class="label" style="margin-bottom:.25rem;display:block">Vision correction</label>
-    <div class="radio-group">
-      <label><input type="radio" name="d-vision" value="normal" onchange="checkDemographics()"> Normal</label>
-      <label><input type="radio" name="d-vision" value="corrected-to-normal" onchange="checkDemographics()"> Corrected-to-normal</label>
-    </div>
-  </div>
+            <!-- TASK MENU -->
+            <div id="s-task-menu" class="screen">
+                <div class="card fade-up">
+                    <div
+                        class="badge badge-blue"
+                        style="margin-bottom: 0.75rem"
+                    >
+                        Your task order
+                    </div>
+                    <h2 style="margin-bottom: 0.25rem">Ready to begin</h2>
+                    <p style="font-size: 0.85rem; margin-bottom: 1.25rem">
+                        The tasks will appear in the randomised order below. You
+                        will have a short break between each one.
+                    </p>
+                    <ul class="task-list" id="tm-list"></ul>
+                    <button
+                        class="btn btn-primary btn-lg"
+                        onclick="beginBattery()"
+                        style="width: 100%"
+                    >
+                        Start first task →
+                    </button>
+                </div>
+            </div>
 
-  <button id="demo-btn" class="btn btn-primary btn-lg" onclick="submitDemographics()" disabled style="width:100%">Continue →</button>
-</div>
-</div>
+            <!-- INSTRUCTIONS (shared) -->
+            <div id="s-instructions" class="screen">
+                <div class="card fade-up">
+                    <div id="inst-body"></div>
+                    <div
+                        style="display: flex; gap: 0.75rem; margin-top: 1.5rem"
+                        id="inst-btns"
+                    >
+                        <button
+                            id="btn-practice"
+                            class="btn"
+                            style="flex: 1"
+                            onclick="DigitSpan.startPractice()"
+                        >
+                            Practice round first
+                        </button>
+                        <button
+                            class="btn btn-primary"
+                            style="flex: 1"
+                            onclick="DigitSpan.startActualTest()"
+                        >
+                            Start test →
+                        </button>
+                    </div>
+                </div>
+            </div>
 
-<!-- TASK MENU -->
-<div id="s-task-menu" class="screen">
-<div class="card fade-up">
-  <div class="badge badge-blue" style="margin-bottom:.75rem">Your task order</div>
-  <h2 style="margin-bottom:.25rem">Ready to begin</h2>
-  <p style="font-size:.85rem;margin-bottom:1.25rem">The tasks will appear in the randomised order below. You will have a short break between each one.</p>
-  <ul class="task-list" id="tm-list"></ul>
-  <button class="btn btn-primary btn-lg" onclick="beginBattery()" style="width:100%">Start first task →</button>
-</div>
-</div>
+            <!-- TRIAL (shared for practice + real) -->
+            <div id="s-trial" class="screen">
+                <div class="card">
+                    <div class="top-bar">
+                        <div>
+                            <div class="label" id="t-cond-label">
+                                Forward span
+                            </div>
+                            <div
+                                id="t-status"
+                                style="
+                                    font-size: 0.85rem;
+                                    color: var(--ink2);
+                                    margin-top: 2px;
+                                "
+                            >
+                                —
+                            </div>
+                        </div>
+                        <div style="text-align: right">
+                            <div class="label">Length</div>
+                            <div
+                                id="t-level"
+                                style="
+                                    font-family: var(--mono);
+                                    font-size: 1.3rem;
+                                    font-weight: 600;
+                                    margin-top: 2px;
+                                "
+                            >
+                                3
+                            </div>
+                        </div>
+                    </div>
+                    <div class="prog-dots" id="t-dots"></div>
+                    <div id="trial-stage"></div>
+                </div>
+            </div>
 
-<!-- INSTRUCTIONS (shared) -->
-<div id="s-instructions" class="screen">
-<div class="card fade-up">
-  <div id="inst-body"></div>
-  <div style="display:flex;gap:.75rem;margin-top:1.5rem" id="inst-btns">
-    <button id="btn-practice" class="btn" style="flex:1" onclick="DigitSpan.startPractice()">Practice round first</button>
-    <button class="btn btn-primary" style="flex:1" onclick="DigitSpan.startActualTest()">Start test →</button>
-  </div>
-</div>
-</div>
+            <!-- BREAK (generic — populated dynamically for inter-task breaks and DigitSpan internal break) -->
+            <div id="s-break" class="screen">
+                <div class="card fade-up" style="text-align: center">
+                    <div id="brk-content"></div>
+                </div>
+            </div>
 
-<!-- TRIAL (shared for practice + real) -->
-<div id="s-trial" class="screen">
-<div class="card">
-  <div class="top-bar">
-    <div>
-      <div class="label" id="t-cond-label">Forward span</div>
-      <div id="t-status" style="font-size:.85rem;color:var(--ink2);margin-top:2px">—</div>
-    </div>
-    <div style="text-align:right">
-      <div class="label">Length</div>
-      <div id="t-level" style="font-family:var(--mono);font-size:1.3rem;font-weight:600;margin-top:2px">3</div>
-    </div>
-  </div>
-  <div class="prog-dots" id="t-dots"></div>
-  <div id="trial-stage"></div>
-</div>
-</div>
+            <!-- STROOP TASK -->
+            <div id="s-stroop" class="screen">
+                <div class="card">
+                    <div class="top-bar">
+                        <div>
+                            <div class="label">Stroop</div>
+                            <div
+                                id="st-status"
+                                style="
+                                    font-size: 0.85rem;
+                                    color: var(--ink2);
+                                    margin-top: 2px;
+                                "
+                            >
+                                —
+                            </div>
+                        </div>
+                        <div style="text-align: right">
+                            <div class="label">Trial</div>
+                            <div
+                                id="st-progress"
+                                style="
+                                    font-family: var(--mono);
+                                    font-size: 1.1rem;
+                                    font-weight: 600;
+                                    margin-top: 2px;
+                                "
+                            >
+                                —
+                            </div>
+                        </div>
+                    </div>
+                    <div
+                        id="st-stage"
+                        style="
+                            min-height: 300px;
+                            display: flex;
+                            flex-direction: column;
+                            align-items: center;
+                            justify-content: center;
+                            gap: 1.5rem;
+                        "
+                    ></div>
+                </div>
+            </div>
 
-<!-- BREAK (generic — populated dynamically for inter-task breaks and DigitSpan internal break) -->
-<div id="s-break" class="screen">
-<div class="card fade-up" style="text-align:center">
-  <div id="brk-content"></div>
-</div>
-</div>
+            <!-- CORSI BLOCK-TAPPING -->
+            <div id="s-corsi" class="screen">
+                <div class="card">
+                    <div class="top-bar">
+                        <div>
+                            <div class="label">Corsi Block-Tapping</div>
+                            <div
+                                id="co-status"
+                                style="
+                                    font-size: 0.85rem;
+                                    color: var(--ink2);
+                                    margin-top: 2px;
+                                "
+                            >
+                                —
+                            </div>
+                        </div>
+                        <div style="text-align: right">
+                            <div class="label">Length</div>
+                            <div
+                                id="co-level"
+                                style="
+                                    font-family: var(--mono);
+                                    font-size: 1.3rem;
+                                    font-weight: 600;
+                                    margin-top: 2px;
+                                "
+                            >
+                                2
+                            </div>
+                        </div>
+                    </div>
+                    <div
+                        id="co-stage"
+                        style="
+                            display: flex;
+                            flex-direction: column;
+                            align-items: center;
+                            gap: 1rem;
+                        "
+                    >
+                        <div
+                            style="
+                                overflow-x: auto;
+                                max-width: 100%;
+                                text-align: center;
+                            "
+                        >
+                            <canvas
+                                id="co-canvas"
+                                width="480"
+                                height="480"
+                                style="
+                                    border-radius: var(--r-sm);
+                                    background: var(--surf2);
+                                    border: 1px solid var(--bd);
+                                    cursor: pointer;
+                                "
+                            ></canvas>
+                        </div>
+                        <div
+                            id="co-controls"
+                            style="
+                                min-height: 50px;
+                                text-align: center;
+                                width: 100%;
+                            "
+                        ></div>
+                    </div>
+                </div>
+            </div>
 
-<!-- STROOP TASK -->
-<div id="s-stroop" class="screen">
-<div class="card">
-  <div class="top-bar">
-    <div>
-      <div class="label">Stroop</div>
-      <div id="st-status" style="font-size:.85rem;color:var(--ink2);margin-top:2px">—</div>
-    </div>
-    <div style="text-align:right">
-      <div class="label">Trial</div>
-      <div id="st-progress" style="font-family:var(--mono);font-size:1.1rem;font-weight:600;margin-top:2px">—</div>
-    </div>
-  </div>
-  <div id="st-stage" style="min-height:300px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.5rem"></div>
-</div>
-</div>
+            <!-- N-BACK TASK -->
+            <div id="s-nback" class="screen">
+                <div class="card">
+                    <div class="top-bar">
+                        <div>
+                            <div class="label">N-Back</div>
+                            <div
+                                id="nb-status"
+                                style="
+                                    font-size: 0.85rem;
+                                    color: var(--ink2);
+                                    margin-top: 2px;
+                                "
+                            >
+                                —
+                            </div>
+                        </div>
+                        <div style="text-align: right">
+                            <div class="label">Trial</div>
+                            <div
+                                id="nb-progress"
+                                style="
+                                    font-family: var(--mono);
+                                    font-size: 1.1rem;
+                                    font-weight: 600;
+                                    margin-top: 2px;
+                                "
+                            >
+                                —
+                            </div>
+                        </div>
+                    </div>
+                    <div
+                        id="nb-stage"
+                        style="
+                            min-height: 300px;
+                            display: flex;
+                            flex-direction: column;
+                            align-items: center;
+                            justify-content: center;
+                            gap: 1rem;
+                        "
+                    ></div>
+                </div>
+            </div>
 
-<!-- CORSI BLOCK-TAPPING -->
-<div id="s-corsi" class="screen">
-<div class="card">
-  <div class="top-bar">
-    <div>
-      <div class="label">Corsi Block-Tapping</div>
-      <div id="co-status" style="font-size:.85rem;color:var(--ink2);margin-top:2px">—</div>
-    </div>
-    <div style="text-align:right">
-      <div class="label">Length</div>
-      <div id="co-level" style="font-family:var(--mono);font-size:1.3rem;font-weight:600;margin-top:2px">2</div>
-    </div>
-  </div>
-  <div id="co-stage" style="display:flex;flex-direction:column;align-items:center;gap:1rem">
-    <div style="overflow-x:auto;max-width:100%;text-align:center">
-      <canvas id="co-canvas" width="480" height="480" style="border-radius:var(--r-sm);background:var(--surf2);border:1px solid var(--bd);cursor:pointer"></canvas>
-    </div>
-    <div id="co-controls" style="min-height:50px;text-align:center;width:100%"></div>
-  </div>
-</div>
-</div>
+            <!-- RESULTS (shell — populated in Step 6) -->
+            <div id="s-results" class="screen">
+                <div class="card fade-up">
+                    <div
+                        style="
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: flex-start;
+                            flex-wrap: wrap;
+                            gap: 1rem;
+                            margin-bottom: 1.5rem;
+                        "
+                    >
+                        <div>
+                            <div
+                                class="badge badge-blue"
+                                style="margin-bottom: 0.5rem"
+                            >
+                                Assessment complete
+                            </div>
+                            <h2>Results summary</h2>
+                            <p
+                                style="
+                                    font-size: 0.8rem;
+                                    margin-top: 3px;
+                                    color: var(--ink2);
+                                "
+                            >
+                                Participant:
+                                <span
+                                    id="r-pid"
+                                    style="
+                                        font-family: var(--mono);
+                                        color: var(--ink);
+                                    "
+                                    >—</span
+                                >
+                            </p>
+                        </div>
+                        <div style="display: flex; gap: 0.5rem">
+                            <button
+                                class="btn"
+                                onclick="downloadCSV()"
+                                style="
+                                    display: flex;
+                                    align-items: center;
+                                    gap: 0.4rem;
+                                    white-space: nowrap;
+                                "
+                            >
+                                <svg
+                                    width="14"
+                                    height="14"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                >
+                                    <path
+                                        d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                                    />
+                                    <polyline points="7 10 12 15 17 10" />
+                                    <line x1="12" y1="15" x2="12" y2="3" />
+                                </svg>
+                                CSV
+                            </button>
+                            <button
+                                class="btn"
+                                onclick="downloadJSON()"
+                                style="
+                                    display: flex;
+                                    align-items: center;
+                                    gap: 0.4rem;
+                                    white-space: nowrap;
+                                "
+                            >
+                                <svg
+                                    width="14"
+                                    height="14"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                >
+                                    <path
+                                        d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                                    />
+                                    <polyline points="7 10 12 15 17 10" />
+                                    <line x1="12" y1="15" x2="12" y2="3" />
+                                </svg>
+                                JSON
+                            </button>
+                        </div>
+                    </div>
 
-<!-- N-BACK TASK -->
-<div id="s-nback" class="screen">
-<div class="card">
-  <div class="top-bar">
-    <div>
-      <div class="label">N-Back</div>
-      <div id="nb-status" style="font-size:.85rem;color:var(--ink2);margin-top:2px">—</div>
-    </div>
-    <div style="text-align:right">
-      <div class="label">Trial</div>
-      <div id="nb-progress" style="font-family:var(--mono);font-size:1.1rem;font-weight:600;margin-top:2px">—</div>
-    </div>
-  </div>
-  <div id="nb-stage" style="min-height:300px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem"></div>
-</div>
-</div>
+                    <!-- Cross-task summary table -->
+                    <table class="data-table" style="margin-bottom: 1.5rem">
+                        <thead>
+                            <tr>
+                                <th>Task</th>
+                                <th>Metric</th>
+                                <th>Value</th>
+                            </tr>
+                        </thead>
+                        <tbody id="r-summary-body"></tbody>
+                    </table>
 
-<!-- RESULTS (shell — populated in Step 6) -->
-<div id="s-results" class="screen">
-<div class="card fade-up">
-  <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem">
-    <div>
-      <div class="badge badge-blue" style="margin-bottom:.5rem">Assessment complete</div>
-      <h2>Results summary</h2>
-      <p style="font-size:.8rem;margin-top:3px;color:var(--ink2)">Participant: <span id="r-pid" style="font-family:var(--mono);color:var(--ink)">—</span></p>
-    </div>
-    <div style="display:flex;gap:.5rem">
-      <button class="btn" onclick="downloadCSV()" style="display:flex;align-items:center;gap:.4rem;white-space:nowrap">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        CSV
-      </button>
-      <button class="btn" onclick="downloadJSON()" style="display:flex;align-items:center;gap:.4rem;white-space:nowrap">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        JSON
-      </button>
-    </div>
-  </div>
+                    <!-- Cross-task RT & outlier summary -->
+                    <div class="divider"></div>
+                    <h3 style="margin-bottom: 0.5rem">
+                        Response time &amp; outliers
+                    </h3>
+                    <div style="overflow-x: auto">
+                        <table
+                            class="data-table"
+                            style="margin-bottom: 0.75rem"
+                        >
+                            <thead>
+                                <tr>
+                                    <th>Task</th>
+                                    <th>Mean RT (ms)</th>
+                                    <th>Trials</th>
+                                    <th>Outliers</th>
+                                    <th>Outlier %</th>
+                                </tr>
+                            </thead>
+                            <tbody id="r-rt-body"></tbody>
+                        </table>
+                    </div>
 
-  <!-- Cross-task summary table -->
-  <table class="data-table" style="margin-bottom:1.5rem">
-    <thead><tr><th>Task</th><th>Metric</th><th>Value</th></tr></thead>
-    <tbody id="r-summary-body"></tbody>
-  </table>
+                    <!-- Per-task detail panels -->
+                    <div id="r-task-panels"></div>
 
-  <!-- Cross-task RT & outlier summary -->
-  <div class="divider"></div>
-  <h3 style="margin-bottom:.5rem">Response time &amp; outliers</h3>
-  <div style="overflow-x:auto">
-    <table class="data-table" style="margin-bottom:.75rem">
-      <thead><tr><th>Task</th><th>Mean RT (ms)</th><th>Trials</th><th>Outliers</th><th>Outlier %</th></tr></thead>
-      <tbody id="r-rt-body"></tbody>
-    </table>
-  </div>
+                    <div class="divider"></div>
+                    <h3 style="margin-bottom:0.5rem">AI Analysis</h3>
+                    <div style="display:flex;gap:0.5rem;margin-bottom:0.75rem;align-items:center">
+                        <input type="text" id="gemini-key" placeholder="Enter Gemini API key" style="flex:1;font-size:0.85rem">
+                        <button class="btn btn-primary" onclick="analyzeWithGemini()" style="white-space:nowrap">Analyze with Gemini</button>
+                    </div>
+                    <div id="r-analysis" style="display:none"></div>
 
-  <!-- Per-task detail panels -->
-  <div id="r-task-panels"></div>
+                    <div
+                        style="
+                            margin-top: 1.5rem;
+                            display: flex;
+                            gap: 0.75rem;
+                            justify-content: center;
+                            flex-wrap: wrap;
+                        "
+                    >
+                        <button class="btn" onclick="restartAll()">
+                            New session
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- #app -->
 
-  <div style="margin-top:1.5rem;display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap">
-    <button class="btn" onclick="restartAll()">New session</button>
-  </div>
-</div>
-</div>
-
-</div><!-- #app -->
-
-<script src="js/utils.js"></script>
-<script src="js/app-shell.js"></script>
-<script src="js/task-digit-span.js"></script>
-<script src="js/task-stroop.js"></script>
-<script src="js/task-corsi.js"></script>
-<script src="js/task-nback.js"></script>
-<script src="js/init.js"></script>
-</body>
+        <script src="js/utils.js"></script>
+        <script src="js/app-shell.js"></script>
+        <script src="js/task-digit-span.js"></script>
+        <script src="js/task-stroop.js"></script>
+        <script src="js/task-corsi.js"></script>
+        <script src="js/task-nback.js"></script>
+        <script src="js/init.js"></script>
+    </body>
 </html>
